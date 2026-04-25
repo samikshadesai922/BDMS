@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:#d32f2f; --red-light:#fdecea; --bg:#f7f7f8; --white:#fff;
+    --border:#e5e7eb; --text:#1a1a1a; --muted:#6b7280; --shadow:0 4px 24px rgba(0,0,0,.08);
+    --radius:14px; --radius-sm:10px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); padding:24px; }
+  .wrap { max-width:1200px; margin:0 auto; }
+  .card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:24px; margin-bottom:20px; }
+  .title { font-size:28px; font-weight:700; margin-bottom:6px; }
+  .sub { color:var(--muted); margin-bottom:20px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; }
+  .label { color:var(--muted); font-size:13px; margin-bottom:6px; }
+  .value { font-size:28px; font-weight:700; }
+  .row { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:12px; }
+  input, select, button { font:inherit; }
+  input, select { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; background:#fafafa; }
+  button { border:none; border-radius:10px; padding:11px 16px; background:var(--red); color:#fff; font-weight:600; cursor:pointer; }
+  .btn-secondary { background:#fff; color:var(--red); border:1px solid var(--red); }
+  .list { display:flex; flex-direction:column; gap:10px; }
+  .item { border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .item-title { font-weight:700; margin-bottom:4px; }
+  .item-meta { color:var(--muted); font-size:13px; line-height:1.5; }
+  .split { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .hidden { display:none; }
+  .alert { display:none; background:var(--red-light); color:var(--red); border-radius:10px; padding:10px 12px; margin-bottom:12px; }
+  @media (max-width: 800px) { .split { grid-template-columns:1fr; } body { padding:16px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="loginCard">
+    <div class="title">Admin Login</div>
+    <div class="sub">Use the admin account to view donors, hospitals, requests, and analytics.</div>
+    <div class="alert" id="loginError"></div>
+    <div class="row">
+      <input type="text" id="adminUser" placeholder="Username">
+      <input type="password" id="adminPass" placeholder="Password">
+    </div>
+    <div class="row">
+      <button onclick="login()">Login</button>
+      <button class="btn-secondary" onclick="window.location.href='Landing.html'">Back</button>
+    </div>
+  </div>
+
+  <div class="hidden" id="dashboard">
+    <div class="card">
+      <div class="title">Admin Panel</div>
+      <div class="sub">System overview, search, and management visibility.</div>
+      <div class="grid" id="overviewGrid"></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <input type="text" id="donorBloodFilter" placeholder="Filter donors by blood group">
+        <input type="text" id="donorLocationFilter" placeholder="Filter donors by location">
+        <select id="donorAvailabilityFilter">
+          <option value="">All donor availability</option>
+          <option value="available">Available</option>
+          <option value="unavailable">Unavailable</option>
+        </select>
+        <input type="text" id="hospitalLocationFilter" placeholder="Filter hospitals by location">
+      </div>
+      <div class="row">
+        <button onclick="renderAll()">Apply Filters</button>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="card">
+        <div class="title" style="font-size:20px;">Donors</div>
+        <div class="sub">Profile, donation history, availability, reliability, and impact.</div>
+        <div class="list" id="donorList"></div>
+      </div>
+      <div class="card">
+        <div class="title" style="font-size:20px;">Hospitals</div>
+        <div class="sub">Hospital details, inventory, and requests.</div>
+        <div class="list" id="hospitalList"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title" style="font-size:20px;">Requests</div>
+      <div class="sub">Active, expired, and completed requests.</div>
+      <div class="list" id="requestList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = 'http://localhost:3002';
+  let adminSession = null;
+  let overviewData = null;
+
+  function esc(value) {
+    return String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('loginError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function login() {
+    document.getElementById('loginError').style.display = 'none';
+    const username = document.getElementById('adminUser').value.trim();
+    const password = document.getElementById('adminPass').value;
+    const response = await fetch(`${API_BASE}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      showError(data.error || 'Login failed');
+      return;
+    }
+    adminSession = data.admin;
+    document.getElementById('loginCard').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    await loadOverview();
+  }
+
+  async function loadOverview() {
+    const response = await fetch(`${API_BASE}/admin/overview`);
+    const data = await response.json();
+    overviewData = data;
+    renderAll();
+  }
+
+  function renderOverview() {
+    const grid = document.getElementById('overviewGrid');
+    const overview = overviewData.overview || {};
+    const items = [
+      ['Total Donors', overview.totalDonors || 0],
+      ['Total Hospitals', overview.totalHospitals || 0],
+      ['Total Requests', overview.totalRequests || 0],
+      ['Active Requests', overview.activeRequests || 0],
+      ['Completed Donations', overview.completedDonations || 0],
+      ['Estimated Lives Helped', overview.estimatedLivesHelped || 0]
+    ];
+    grid.innerHTML = '';
+    items.forEach(([label, value]) => {
+      const card = document.createElement('div');
+      card.className = 'stat';
+      card.innerHTML = `<div class="label">${esc(label)}</div><div class="value">${esc(value)}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderDonors() {
+    const list = document.getElementById('donorList');
+    const blood = document.getElementById('donorBloodFilter').value.trim().toUpperCase();
+    const location = document.getElementById('donorLocationFilter').value.trim().toLowerCase();
+    const availability = document.getElementById('donorAvailabilityFilter').value;
+    const donors = (overviewData.donors || []).filter(donor => {
+      if (blood && (donor.bloodGroup || '').toUpperCase() !== blood) return false;
+      if (location && !(donor.locationLabel || '').toLowerCase().includes(location)) return false;
+      if (availability === 'available' && donor.available !== true) return false;
+      if (availability === 'unavailable' && donor.available === true) return false;
+      return true;
+    });
+    list.innerHTML = donors.length ? '' : '<div class="item"><div class="item-meta">No donors match the current filters.</div></div>';
+    donors.forEach(donor => {
+      const item = document.createElement('div');
+      item.className = 'item';
+      item.innerHTML = `
+        <div class="item-title">${esc(donor.name)} (${esc(donor.bloodGroup)})</div>
+        <div class="item-meta">
+          ${esc(donor.locationLabel)}<br>
+          Availability: ${esc(donor.available ? 'Available' : 'Unavailable')}<br>
+          Readiness: ${esc(donor.eligibility && donor.eligibility.readinessStatus)}<br>
+          Reliability Score: ${esc(donor.reliabilityScore)}<br>
+          Donations: ${esc(donor.impact && donor.impact.totalDonations)}<br>
+          Lives Helped: ${esc(donor.impact && donor.impact.estimatedLivesHelped)}
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function renderHospitals() {
+    const list = document.getElementById('hospitalList');
+    const location = document.getElementById('hospitalLocationFilter').value.trim().toLowerCase();
+    const hospitals = (overviewData.hospitals || []).filter(hospital => !location || (hospital.address || '').toLowerCase().includes(location));
+    list.innerHTML = hospitals.length ? '' : '<div class="item"><div class="item-meta">No hospitals match the current filters.</div></div>';
+    hospitals.forEach(hospital => {
+      const hospitalRequests = (overviewData.requests || []).filter(request => (request.hospitalName || '').toLowerCase() === (hospital.hospitalName || '').toLowerCase());
+      const item = document.createElement('div');
+      item.className = 'item';
+      item.innerHTML = `
+        <div class="item-title">${esc(hospital.hospitalName)}</div>
+        <div class="item-meta">
+          ${esc(hospital.address)}<br>
+          Requests: ${esc(hospitalRequests.length)}<br>
+          Statuses: ${esc(hospitalRequests.map(request => request.status).join(', ') || 'No requests')}
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function renderRequests() {
+    const list = document.getElementById('requestList');
+    const requests = overviewData.requests || [];
+    list.innerHTML = requests.length ? '' : '<div class="item"><div class="item-meta">No requests found.</div></div>';
+    requests.forEach(request => {
+      const item = document.createElement('div');
+      item.className = 'item';
+      item.innerHTML = `
+        <div class="item-title">${esc(request.hospitalName)} - ${esc(request.bloodGroup)}</div>
+        <div class="item-meta">
+          Priority: ${esc(request.priority || request.urgency)}<br>
+          Status: ${esc(request.status)}<br>
+          Expires: ${esc(request.expiresAt || 'N/A')}<br>
+          Accepted Donor: ${esc(request.acceptedDonorName || 'None')}
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function renderAll() {
+    if (!overviewData) return;
+    renderOverview();
+    renderDonors();
+    renderHospitals();
+    renderRequests();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "bdm-backend",
+  "version": "2.0.0",
+  "description": "Blood Donation Management System with live donor matching, maps, and notifications",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node -c server.js"
+  },
+  "keywords": [
+    "blood-donation",
+    "nodejs",
+    "leaflet",
+    "geolocation"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mysql2": "^3.22.2"
+  }
+}

@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hospital Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+  :root {
+    --red: #D92B2B;
+    --red-dark: #B71C1C;
+    --red-light: #FDECEA;
+    --red-soft: #F5C6C6;
+    --text: #1A1A1A;
+    --muted: #6B7280;
+    --border: #E5E7EB;
+    --bg: #F7F7F8;
+    --white: #FFFFFF;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    --shadow-lg: 0 12px 48px rgba(0,0,0,0.12);
+    --radius: 14px;
+    --radius-sm: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  #landing { text-align: center; max-width: 480px; width: 100%; }
+  .logo-wrap {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 64px; height: 64px; background: var(--red);
+    border-radius: 18px; margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(217,43,43,0.35);
+  }
+  .logo-wrap svg { width: 34px; height: 34px; }
+  .landing-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.4rem; color: var(--text);
+    margin-bottom: 10px; line-height: 1.15;
+  }
+  .landing-sub { color: var(--muted); font-size: 1rem; margin-bottom: 36px; line-height: 1.6; }
+  .landing-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 32px; box-shadow: var(--shadow); border: 1px solid var(--border);
+  }
+  .landing-card h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  .landing-card p  { font-size: 0.9rem; color: var(--muted); margin-bottom: 24px; }
+  .btn-primary {
+    display: block; width: 100%; background: var(--red); color: white;
+    border: none; padding: 14px 24px; border-radius: 50px;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    font-family: 'DM Sans', sans-serif; letter-spacing: 0.01em;
+    text-decoration: none; text-align: center;
+  }
+  .btn-primary:hover {
+    background: var(--red-dark); transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(217,43,43,0.35);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 20px 0; color: var(--muted); font-size: 0.85rem;
+  }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .btn-secondary {
+    display: block; width: 100%; background: transparent; color: var(--red);
+    border: 2px solid var(--red-soft); padding: 13px 24px; border-radius: 50px;
+    font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-secondary:hover { background: var(--red-light); border-color: var(--red); transform: translateY(-1px); }
+  .page-overlay {
+    position: fixed; inset: 0; background: var(--bg); z-index: 100;
+    display: flex; align-items: flex-start; justify-content: center;
+    overflow-y: auto; padding: 32px 16px 48px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(24px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .page-overlay.active { opacity: 1; pointer-events: all; transform: translateY(0); }
+  .page-inner { width: 100%; max-width: 520px; text-align: center; }
+  .page-header { margin-bottom: 28px; }
+  .page-header .logo-wrap { margin-bottom: 16px; }
+  .page-header h1 { font-size: 1.65rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .page-header p  { color: var(--muted); font-size: 0.92rem; }
+  .form-card {
+    background: var(--white); border-radius: var(--radius); padding: 32px;
+    box-shadow: var(--shadow-lg); border: 1px solid var(--border); text-align: left;
+  }
+  .form-card h2 { font-size: 1.35rem; font-weight: 700; color: var(--text); margin-bottom: 4px; text-align: center; }
+  .form-card .form-sub { text-align: center; color: var(--muted); font-size: 0.88rem; margin-bottom: 28px; }
+  .form-group { margin-bottom: 18px; }
+  label { display: block; font-size: 0.88rem; font-weight: 500; color: var(--text); margin-bottom: 7px; }
+  .input-wrap { position: relative; display: flex; align-items: center; }
+  .input-icon { position: absolute; left: 13px; color: #9CA3AF; display: flex; align-items: center; pointer-events: none; }
+  .input-icon svg { width: 18px; height: 18px; }
+  .input-wrap input {
+    width: 100%; padding: 12px 14px 12px 40px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 0.93rem; font-family: 'DM Sans', sans-serif; color: var(--text);
+    background: #FAFAFA; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    outline: none;
+  }
+  .input-wrap input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(217,43,43,0.1); background: var(--white); }
+  .input-wrap input::placeholder { color: #C4C9D4; }
+  .input-suffix { position: absolute; right: 13px; color: #9CA3AF; cursor: pointer; display: flex; align-items: center; }
+  .input-suffix svg { width: 18px; height: 18px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .error-msg {
+    display: none; background: var(--red-light); color: var(--red);
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 0.85rem; margin-bottom: 16px; font-weight: 500;
+  }
+  .submit-btn {
+    display: block; width: 100%; background: var(--red); color: white;
+    border: none; padding: 14px 24px; border-radius: 50px;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    font-family: 'DM Sans', sans-serif; margin-top: 8px;
+  }
+  .submit-btn:hover { background: var(--red-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(217,43,43,0.35); }
+  .page-footer { margin-top: 20px; text-align: center; font-size: 0.9rem; color: var(--muted); }
+  .page-footer a { color: var(--red); font-weight: 600; text-decoration: none; cursor: pointer; transition: opacity 0.2s; }
+  .page-footer a:hover { opacity: 0.75; }
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--muted); font-size: 0.88rem; cursor: pointer;
+    text-decoration: none; margin-top: 12px; transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--text); }
+  .forgot { text-align: right; margin-top: -8px; margin-bottom: 20px; }
+  .forgot a { color: var(--red); font-size: 0.85rem; font-weight: 600; text-decoration: none; cursor: pointer; }
+  .inline-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .mini-btn {
+    border:1.5px solid var(--red-soft); background:#fff; color:var(--red); border-radius:999px;
+    padding:10px 14px; font-size:.85rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif;
+  }
+  .mini-btn:hover { background:var(--red-light); border-color:var(--red); }
+  .map-modal { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:300; padding:16px; }
+  .map-modal.active { display:flex; }
+  .map-card { width:min(680px,100%); background:#fff; border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-lg); padding:18px; }
+  .map-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .map-title { font-size:1.05rem; font-weight:700; }
+  .map-close { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1.2rem; }
+  #hospitalMap {
+    height:320px; border-radius:12px; overflow:hidden; border:1px solid var(--border); position:relative;
+    background:#f8fafc;
+  }
+  .map-toolbar { display:flex; gap:8px; margin-bottom:10px; }
+  .map-tool-btn {
+    border:1px solid var(--border); background:#fff; color:var(--text); border-radius:10px;
+    padding:8px 12px; font-size:.85rem; font-weight:600; cursor:pointer;
+  }
+  .map-tool-btn:hover { border-color:var(--red); color:var(--red); }
+  .map-canvas { width:100%; height:100%; }
+  .map-pin {
+    position:absolute; width:16px; height:16px; border-radius:50%; background:var(--red);
+    border:3px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.18); transform:translate(-50%,-50%);
+    pointer-events:none; z-index:2;
+  }
+  .map-note { font-size:.8rem; color:var(--muted); margin-top:10px; }
+  @media (max-width: 480px) {
+    .row-2 { grid-template-columns: 1fr; }
+    .form-card { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LANDING PAGE -->
+<div id="landing">
+  <div class="logo-wrap">
+    <svg viewBox="0 0 34 34" fill="none">
+      <path d="M17 4C17 4 6 14.5 6 20.5C6 26.8 11 31 17 31C23 31 28 26.8 28 20.5C28 14.5 17 4Z" fill="white"/>
+      <path d="M17 10C17 10 10 17 10 21C10 24.3 13.1 27 17 27" stroke="#D92B2B" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <h1 class="landing-title">"Fast Blood Access,"<br> Faster Care</h1>
+  <p class="landing-sub">Access your hospital dashboard.<br>Register or login to your Hospital account.</p>
+  <div class="landing-card">
+    <h3>New Here?</h3>
+    <p>Create your account and start saving lives today.</p>
+    <button class="btn-primary" onclick="showPage('register')">Join as a Hospital</button>
+    <div class="divider">Already registered?</div>
+    <button class="btn-secondary" onclick="showPage('login')">Login to Your Account</button>
+  </div>
+</div>
+
+<!-- REGISTRATION PAGE -->
+<div id="register" class="page-overlay">
+  <div class="page-inner">
+    <div class="page-header">
+      <div class="logo-wrap">
+        <svg viewBox="0 0 34 34" fill="none">
+          <path d="M17 4C17 4 6 14.5 6 20.5C6 26.8 11 31 17 31C23 31 28 26.8 28 20.5C28 14.5 17 4Z" fill="white"/>
+          <path d="M17 10C17 10 10 17 10 21C10 24.3 13.1 27 17 27" stroke="#D92B2B" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Join as Hospital</h1>
+      <p>Create your account to save lives</p>
+    </div>
+    <div class="form-card">
+      <h2>Hospital Registration</h2>
+      <p class="form-sub">Create your hospital account</p>
+      <div class="error-msg" id="regError"></div>
+
+      <div class="form-group">
+        <label>Hospital Name</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 01-2-2V7l5-5h11a2 2 0 012 2v15zM12 11v6M9 14h6"/></svg>
+          </span>
+          <input type="text" id="regName" placeholder="Enter hospital name">
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="form-group">
+          <label>Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+            </span>
+            <input type="email" id="regEmail" placeholder="hospital@example.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3l1.5 4.5-2.25 1.13a11 11 0 005.12 5.12L13.5 13.5 18 15v3a2 2 0 01-2 2C8.16 20 4 15.84 4 9A4 4 0 013 5z"/></svg>
+            </span>
+            <input type="tel" id="regPhone" placeholder="+91 9876543210">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Address</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0L6.343 16.657a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </span>
+          <input type="text" id="regAddress" placeholder="Enter full address">
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="form-group">
+          <label>Latitude</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+            </span>
+            <input type="number" step="any" id="regLatitude" placeholder="19.0760">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Longitude</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+            </span>
+            <input type="number" step="any" id="regLongitude" placeholder="72.8777">
+          </div>
+        </div>
+      </div>
+      <div class="inline-actions">
+        <button type="button" class="mini-btn" onclick="useCurrentLocation()">Use Current Location</button>
+        <button type="button" class="mini-btn" onclick="openMapPicker()">Set Location on Map</button>
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </span>
+          <input type="password" id="regPass" placeholder="Create Strong Password">
+          <span class="input-suffix" onclick="togglePass('regPass', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </span>
+          <input type="password" id="confPass" placeholder="Re-enter Password">
+          <span class="input-suffix" onclick="togglePass('confPass', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <button class="submit-btn" onclick="handleRegister()">Register Hospital</button>
+    </div>
+    <p class="page-footer" style="margin-top:18px;">
+      Already have an account? <a onclick="switchTo('login')">Login</a>
+    </p>
+    <div style="text-align:center;margin-top:10px;">
+      <a class="back-link" onclick="hidePage('register')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back to Home
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div id="login" class="page-overlay">
+  <div class="page-inner" style="max-width:460px;">
+    <div class="page-header">
+      <div class="logo-wrap">
+        <svg viewBox="0 0 34 34" fill="none">
+          <path d="M17 4C17 4 6 14.5 6 20.5C6 26.8 11 31 17 31C23 31 28 26.8 28 20.5C28 14.5 17 4Z" fill="white"/>
+          <path d="M17 10C17 10 10 17 10 21C10 24.3 13.1 27 17 27" stroke="#D92B2B" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Hospital Portal</h1>
+      <p>Access Your Hospital Dashboard</p>
+    </div>
+    <div class="form-card">
+      <h2>Hospital Login</h2>
+      <p class="form-sub">Enter your credentials to access your account</p>
+      <div class="error-msg" id="loginError"></div>
+
+      <div class="form-group">
+        <label>Hospital Name</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 01-2-2V7l5-5h11a2 2 0 012 2v15zM12 11v6M9 14h6"/></svg>
+          </span>
+          <input type="text" id="loginHospitalName" placeholder="Enter your hospital name">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Hospital Email</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+          </span>
+          <input type="email" id="loginEmail" placeholder="hospital@example.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </span>
+          <input type="password" id="loginPass" placeholder="Enter Your Password">
+          <span class="input-suffix" onclick="togglePass('loginPass', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="forgot"><a>Forget Password?</a></div>
+      <button class="submit-btn" onclick="handleLogin()">Login</button>
+    </div>
+    <p class="page-footer" style="margin-top:18px;">
+      Don't have an account? <a onclick="switchTo('register')">Register</a>
+    </p>
+    <div style="text-align:center;margin-top:10px;">
+      <a class="back-link" onclick="hidePage('login')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back to Home
+      </a>
+    </div>
+  </div>
+</div>
+
+  <div id="mapModal" class="map-modal" onclick="closeMapPicker(event)">
+    <div class="map-card" onclick="event.stopPropagation()">
+        <div class="map-head">
+          <div class="map-title">Select Hospital Location</div>
+          <button class="map-close" type="button" onclick="closeMapPicker()">&times;</button>
+        </div>
+      <div class="map-toolbar">
+        <button class="map-tool-btn" type="button" onclick="zoomMap(1)">Zoom In</button>
+        <button class="map-tool-btn" type="button" onclick="zoomMap(-1)">Zoom Out</button>
+        <button class="map-tool-btn" type="button" onclick="resetMapView()">Reset View</button>
+      </div>
+      <div id="hospitalMap">
+        <div id="hospitalMapCanvas" class="map-canvas"></div>
+      </div>
+        <div class="map-note">Drag the map freely, then click once to set the exact location.</div>
+      </div>
+    </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    const API_BASE = 'http://localhost:3002';
+    let hospitalMapReady = false;
+    const DEFAULT_MAP_CENTER = { lat: 22.9734, lon: 78.6569 };
+    let hospitalMapInstance = null;
+    let hospitalMarker = null;
+
+  function showPage(id) {
+    document.getElementById(id).classList.add('active');
+  }
+  function hidePage(id) {
+    const el = document.getElementById(id);
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    setTimeout(() => {
+      el.classList.remove('active');
+      el.style.opacity = '';
+      el.style.transform = '';
+    }, 320);
+  }
+  function switchTo(id) {
+    const other = id === 'login' ? 'register' : 'login';
+    const outEl = document.getElementById(other);
+    const inEl  = document.getElementById(id);
+    outEl.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+    outEl.style.opacity    = '0';
+    outEl.style.transform  = 'translateX(-32px)';
+    setTimeout(() => {
+      outEl.classList.remove('active');
+      outEl.style.opacity = outEl.style.transform = outEl.style.transition = '';
+      inEl.style.cssText = 'opacity:0;transform:translateX(32px);transition:none;';
+      inEl.classList.add('active');
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        inEl.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        inEl.style.opacity = '1';
+        inEl.style.transform = 'translateX(0)';
+        setTimeout(() => { inEl.style.cssText = ''; }, 320);
+      }));
+    }, 260);
+  }
+
+  function togglePass(id, btn) {
+    const input = document.getElementById(id);
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    btn.style.color = isPass ? 'var(--red)' : '';
+  }
+
+  function showError(elId, msg) {
+    const el = document.getElementById(elId);
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function clearError(elId) {
+    document.getElementById(elId).style.display = 'none';
+  }
+
+  function setCoords(latitude, longitude) {
+    document.getElementById('regLatitude').value = latitude.toFixed(6);
+    document.getElementById('regLongitude').value = longitude.toFixed(6);
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      showError('regError', 'Current location is not supported in this browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => setCoords(pos.coords.latitude, pos.coords.longitude),
+      () => showError('regError', 'Could not fetch current location.'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }
+
+  function placeMarker(lat, lon) {
+    if (!hospitalMapInstance) return;
+    if (!hospitalMarker) {
+      hospitalMarker = L.marker([lat, lon]).addTo(hospitalMapInstance);
+    } else {
+      hospitalMarker.setLatLng([lat, lon]);
+    }
+  }
+
+  function ensureMap() {
+    if (hospitalMapReady) return;
+    hospitalMapInstance = L.map('hospitalMapCanvas').setView([DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lon], 5);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri'
+    }).addTo(hospitalMapInstance);
+    hospitalMapInstance.on('click', (event) => {
+      const { lat, lng } = event.latlng;
+      setCoords(lat, lng);
+      placeMarker(lat, lng);
+    });
+    hospitalMapReady = true;
+  }
+
+  function zoomMap(delta) {
+    if (!hospitalMapInstance) return;
+    hospitalMapInstance.setZoom(Math.max(3, Math.min(17, hospitalMapInstance.getZoom() + delta)));
+  }
+
+  function resetMapView() {
+    if (!hospitalMapInstance) return;
+    hospitalMapInstance.setView([DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lon], 5);
+  }
+
+    function openMapPicker() {
+      document.getElementById('mapModal').classList.add('active');
+      setTimeout(() => {
+        ensureMap();
+        const lat = parseFloat(document.getElementById('regLatitude').value);
+        const lon = parseFloat(document.getElementById('regLongitude').value);
+        if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+          hospitalMapInstance.setView([lat, lon], 11);
+          placeMarker(lat, lon);
+        }
+        setTimeout(() => hospitalMapInstance.invalidateSize(), 80);
+      }, 50);
+    }
+
+  function closeMapPicker(event) {
+    if (event && event.target !== document.getElementById('mapModal')) return;
+    document.getElementById('mapModal').classList.remove('active');
+  }
+
+  function saveAndRedirect(user) {
+    const payload = JSON.stringify(user);
+    sessionStorage.setItem('hospitalUser', payload);
+    localStorage.setItem('hospitalUser', payload);
+    window.location.href = 'hospital-dashboard.html';
+  }
+
+  async function handleLogin() {
+    clearError('loginError');
+    const hospitalName = document.getElementById('loginHospitalName').value.trim();
+    const email        = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const password     = document.getElementById('loginPass').value;
+
+    if (!hospitalName || !email || !password) {
+      showError('loginError', 'Please fill in all fields.'); return;
+    }
+    if (!email.includes('@')) {
+      showError('loginError', 'Enter a valid email address.'); return;
+    }
+    if (password.length < 6) {
+      showError('loginError', 'Password must be at least 6 characters.'); return;
+    }
+
+    const authRaw = localStorage.getItem('hospital_' + email);
+    if (!authRaw) {
+      showError('loginError', 'No hospital account found. Please register first.'); return;
+    }
+
+    const profile = JSON.parse(authRaw);
+    if (profile.password !== password) {
+      showError('loginError', 'Incorrect password.'); return;
+    }
+
+    const response = await fetch(`${API_BASE}/hospitals`);
+    const data = await response.json();
+    const backendHospital = (data.hospitals || []).find(item =>
+      (item.email || '').toLowerCase() === email &&
+      (item.hospitalName || '').toLowerCase() === hospitalName.toLowerCase()
+    );
+    saveAndRedirect({
+      hospitalName: backendHospital ? backendHospital.hospitalName : hospitalName,
+      email,
+      address: profile.address || hospitalName,
+      latitude: backendHospital && backendHospital.latitude != null ? backendHospital.latitude : (profile.latitude || 19.076),
+      longitude: backendHospital && backendHospital.longitude != null ? backendHospital.longitude : (profile.longitude || 72.8777)
+    });
+  }
+
+  async function handleRegister() {
+    clearError('regError');
+    const name     = document.getElementById('regName').value.trim();
+    const email    = document.getElementById('regEmail').value.trim().toLowerCase();
+    const phone    = document.getElementById('regPhone').value.trim();
+    const address  = document.getElementById('regAddress').value.trim();
+    const latitude = parseFloat(document.getElementById('regLatitude').value);
+    const longitude = parseFloat(document.getElementById('regLongitude').value);
+    const password = document.getElementById('regPass').value;
+    const confirm  = document.getElementById('confPass').value;
+
+    if (!name || !email || !password || !confirm || !phone || !address || Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      showError('regError', 'Please fill in all required fields.'); return;
+    }
+    if (!email.includes('@')) {
+      showError('regError', 'Enter a valid email address.'); return;
+    }
+    if (password.length < 6) {
+      showError('regError', 'Password must be at least 6 characters.'); return;
+    }
+    if (password !== confirm) {
+      showError('regError', 'Passwords do not match.'); return;
+    }
+
+    const backendResponse = await fetch(`${API_BASE}/add-hospital`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hospitalName: name,
+        email,
+        phone,
+        address,
+        latitude,
+        longitude
+      })
+    });
+    const backendData = await backendResponse.json();
+    if (!backendResponse.ok || backendData.error) {
+      showError('regError', backendData.error || 'Could not register hospital.');
+      return;
+    }
+
+    localStorage.setItem('hospital_' + email, JSON.stringify({ hospitalName: name, email, phone, address, latitude, longitude, password }));
+    saveAndRedirect({
+      hospitalName: name,
+      email,
+      phone,
+      address,
+      latitude,
+      longitude
+    });
+  }
+</script>
+</body>
+</html>

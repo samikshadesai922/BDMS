@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Donor Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --red:#C8001A; --red-dark:#9b0014; --red-light:#fff5f5; --red-soft:#ffe0e0;
+    --green:#16a34a; --green-bg:#f0fdf4; --white:#fff; --gray-50:#f8f9fb; --gray-100:#f1f3f5;
+    --gray-200:#e4e7ec; --gray-400:#98a2b3; --gray-500:#667085; --gray-700:#344054; --gray-900:#101828;
+    --shadow-sm:0 1px 3px rgba(16,24,40,0.08),0 1px 2px rgba(16,24,40,0.06); --radius:16px; --radius-sm:10px; --radius-xs:8px;
+  }
+  body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--gray-50); color:var(--gray-900); min-height:100vh; }
+  .topnav { background:var(--white); border-bottom:1px solid var(--gray-200); height:58px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; position:sticky; top:0; z-index:50; }
+  .nav-back, .logout-btn { display:flex; align-items:center; gap:7px; font-family:inherit; text-decoration:none; cursor:pointer; }
+  .nav-back { font-size:13.5px; font-weight:500; color:var(--gray-500); background:none; border:none; }
+  .nav-back:hover { color:var(--red); }
+  .nav-brand { display:flex; align-items:center; gap:8px; font-size:17px; font-weight:700; color:var(--red); }
+  .nav-brand svg { width:20px; height:20px; fill:var(--red); }
+  .logout-btn { background:none; border:1px solid var(--gray-200); border-radius:8px; padding:6px 14px; font-size:13px; font-weight:600; color:var(--gray-700); }
+  .logout-btn:hover { background:var(--red-light); color:var(--red); border-color:var(--red); }
+  .page { max-width:1100px; margin:0 auto; padding:32px 24px 60px; }
+  .banner { background:linear-gradient(130deg,var(--red) 0%, #8b0000 100%); border-radius:var(--radius); padding:30px 36px; display:flex; align-items:center; justify-content:space-between; color:#fff; margin-bottom:28px; }
+  .banner-name { font-size:28px; font-weight:800; margin-bottom:6px; }
+  .banner-tagline { font-size:13px; opacity:.75; }
+  .blood-badge { background:rgba(255,255,255,.15); border:1.5px solid rgba(255,255,255,.30); border-radius:14px; padding:18px 26px; text-align:center; min-width:108px; }
+  .blood-badge-label { font-size:11px; font-weight:600; opacity:.8; text-transform:uppercase; margin-bottom:2px; }
+  .blood-badge-value { font-size:34px; font-weight:800; }
+  .grid { display:grid; grid-template-columns:1fr; gap:24px; align-items:start; }
+  .col-left, .col-right { display:flex; flex-direction:column; gap:24px; }
+  .triple-row { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:24px; align-items:start; }
+  .card { background:var(--white); border-radius:var(--radius); padding:26px; box-shadow:var(--shadow-sm); border:1px solid var(--gray-200); }
+  .card-header { margin-bottom:20px; }
+  .card-title { font-size:16px; font-weight:700; color:var(--gray-900); margin-bottom:2px; }
+  .card-sub { font-size:12.5px; color:var(--gray-400); }
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .info-tile { border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); padding:13px 15px; display:flex; align-items:center; gap:12px; }
+  .info-tile.full { grid-column:1 / -1; }
+  .tile-icon { width:38px; height:38px; background:var(--red-light); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .tile-icon svg { width:17px; height:17px; fill:var(--red); }
+  .tile-label { font-size:11px; font-weight:600; color:var(--gray-400); text-transform:uppercase; margin-bottom:3px; }
+  .tile-value { font-size:14.5px; font-weight:700; color:var(--gray-900); }
+  .elig-row { display:flex; align-items:center; gap:12px; background:var(--green-bg); border:1.5px solid #bbf7d0; border-radius:var(--radius-sm); padding:14px 16px; }
+  .elig-row svg { width:26px; height:26px; fill:var(--green); }
+  .elig-title { font-size:14px; font-weight:700; color:var(--green); }
+  .elig-desc { font-size:12px; color:#166534; margin-top:1px; }
+  .avail-row { display:flex; align-items:center; justify-content:space-between; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); padding:15px 16px; margin-bottom:12px; }
+  .avail-label { font-size:15px; font-weight:700; color:var(--gray-900); }
+  .avail-sub { font-size:12px; color:var(--gray-400); margin-top:2px; }
+  .toggle { position:relative; width:46px; height:25px; }
+  .toggle input { display:none; }
+  .toggle-track { position:absolute; inset:0; background:var(--gray-200); border-radius:100px; cursor:pointer; transition:background .25s; }
+  .toggle input:checked + .toggle-track { background:var(--red); }
+  .toggle-knob { position:absolute; top:3px; left:3px; width:19px; height:19px; background:#fff; border-radius:50%; pointer-events:none; transition:transform .25s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+  .toggle input:checked ~ .toggle-knob { transform:translateX(21px); }
+  .status-pill { width:100%; padding:11px; border-radius:var(--radius-xs); text-align:center; font-size:13.5px; font-weight:700; }
+  .status-pill.on { background:var(--green-bg); color:var(--green); }
+  .status-pill.off { background:var(--gray-100); color:var(--gray-400); }
+  .notif-heading { display:flex; align-items:center; gap:8px; font-size:16px; font-weight:700; color:var(--gray-900); margin-bottom:16px; }
+  .notif-heading svg { width:18px; height:18px; fill:var(--red); }
+  .notif-badge { margin-left:auto; background:var(--red); color:#fff; font-size:11px; font-weight:700; border-radius:999px; padding:2px 8px; }
+  .notif-list { display:flex; flex-direction:column; }
+  .notif-item { display:flex; gap:12px; padding:13px 0; border-bottom:1px solid var(--gray-100); }
+  .notif-item:last-child { border-bottom:none; }
+  .notif-icon-wrap { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; }
+  .notif-icon-wrap.emergency { background:var(--red-light); }
+  .notif-icon-wrap.emergency svg { fill:var(--red); }
+  .notif-icon-wrap.normal { background:#e3f2fd; }
+  .notif-icon-wrap.normal svg { fill:#1565c0; }
+  .notif-icon-wrap svg { width:16px; height:16px; }
+  .notif-title { font-size:13.5px; font-weight:600; color:var(--gray-900); margin-bottom:4px; line-height:1.35; }
+  .notif-meta { font-size:12px; color:var(--gray-400); line-height:1.5; }
+  .tag { display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; margin-left:4px; vertical-align:middle; }
+  .tag-emergency { background:var(--red-light); color:var(--red); }
+  .tag-normal { background:#e3f2fd; color:#1565c0; }
+  .tag-match { background:var(--green-bg); color:var(--green); }
+  .notif-empty { text-align:center; color:var(--gray-400); font-size:13px; padding:24px 0; }
+    .refresh-btn, .mini-btn { display:flex; align-items:center; gap:5px; border-radius:7px; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+  .refresh-btn { background:none; border:1px solid var(--gray-200); padding:5px 10px; color:var(--gray-500); margin-left:auto; }
+  .refresh-btn:hover { background:var(--red-light); color:var(--red); border-color:var(--red); }
+  .mini-btn { border:1px solid var(--gray-200); background:#fff; color:var(--gray-700); padding:7px 10px; }
+  .mini-btn.primary { background:var(--red); border-color:var(--red); color:#fff; }
+  .mini-btn.success { background:var(--green); border-color:var(--green); color:#fff; }
+    .mini-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .cert-link {
+      display:inline-flex; align-items:center; gap:6px; margin-top:8px; color:var(--red); text-decoration:none;
+      font-size:12px; font-weight:700;
+    }
+    .cert-link:hover { text-decoration:underline; }
+    .action-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .stack { display:flex; flex-direction:column; gap:10px; }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field label { font-size:12px; color:var(--gray-500); font-weight:600; }
+  .field input, .field select { width:100%; border:1px solid var(--gray-200); border-radius:10px; padding:10px 12px; font:inherit; background:#fff; }
+  @media (max-width:760px) {
+    .grid { grid-template-columns:1fr; }
+    .triple-row { grid-template-columns:1fr; }
+    .info-grid { grid-template-columns:1fr; }
+    .info-tile.full { grid-column:1; }
+    .banner { flex-direction:column; gap:20px; padding:24px 22px; }
+    .banner-name { font-size:22px; }
+    .page { padding:20px 16px 40px; }
+    .topnav { padding:0 16px; }
+  }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a href="Landing.html" class="nav-back">
+    <svg viewBox="0 0 24 24"><path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Back to Home
+  </a>
+  <div class="nav-brand">
+    <svg viewBox="0 0 24 24"><path d="M12 2C12 2 4 10 4 15a8 8 0 0016 0C20 10 12 2 12 2z"/></svg>
+    Donor Portal
+  </div>
+  <button class="logout-btn" onclick="handleLogout()">
+    <svg viewBox="0 0 24 24"><path stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"/></svg>
+    Logout
+  </button>
+</nav>
+
+<div class="page">
+  <div class="banner">
+    <div>
+      <div class="banner-name" id="dash-name">-</div>
+      <div class="banner-tagline">Thank you for being a life-saver!</div>
+    </div>
+    <div class="blood-badge">
+      <div class="blood-badge-label">Blood Group</div>
+      <div class="blood-badge-value" id="dash-blood">-</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="col-left">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Donor Information</div>
+          <div class="card-sub">Your registered details</div>
+        </div>
+        <div class="info-grid">
+          <div class="info-tile"><div class="tile-icon"><svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z"/></svg></div><div><div class="tile-label">Full Name</div><div class="tile-value" id="info-name">-</div></div></div>
+          <div class="info-tile"><div class="tile-icon"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg></div><div><div class="tile-label">Age</div><div class="tile-value" id="info-age">-</div></div></div>
+          <div class="info-tile"><div class="tile-icon"><svg viewBox="0 0 24 24"><path d="M12 2C12 2 4 10 4 15a8 8 0 0016 0C20 10 12 2 12 2z"/></svg></div><div><div class="tile-label">Blood Group</div><div class="tile-value" id="info-blood">-</div></div></div>
+          <div class="info-tile"><div class="tile-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg></div><div><div class="tile-label">Location</div><div class="tile-value" id="info-location">-</div></div></div>
+          <div class="info-tile full"><div class="tile-icon"><svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.21 2.2z"/></svg></div><div><div class="tile-label">Phone Number</div><div class="tile-value" id="info-phone">-</div></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Donation Eligibility</div>
+          <div class="card-sub">Based on your registered details</div>
+        </div>
+        <div class="elig-row" id="eligRow">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5l-4-4 1.41-1.41L10 13.67l6.59-6.58L18 8.5l-8 8z"/></svg>
+          <div>
+            <div class="elig-title" id="elig-title">You're eligible to donate!</div>
+            <div class="elig-desc" id="elig-desc">Age and health criteria met</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Impact Tracker</div>
+          <div class="card-sub">Your donation contribution so far</div>
+        </div>
+        <div class="info-grid">
+          <div class="info-tile"><div class="tile-icon"><svg viewBox="0 0 24 24"><path d="M12 2C12 2 4 10 4 15a8 8 0 0016 0C20 10 12 2 12 2z"/></svg></div><div><div class="tile-label">Total Donations</div><div class="tile-value" id="impactDonations">0</div></div></div>
+          <div class="info-tile"><div class="tile-icon"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-7-11a4 4 0 017-2.65A4 4 0 0119 10c0 6.65-7 11-7 11z"/></svg></div><div><div class="tile-label">Estimated Lives Helped</div><div class="tile-value" id="impactLives">0</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-right">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Availability Status</div></div>
+        <div class="avail-row">
+          <div>
+            <div class="avail-label">Available to Donate</div>
+            <div class="avail-sub">Receive requests from hospitals</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="availToggle" onchange="updateStatus()">
+            <div class="toggle-track"></div>
+            <div class="toggle-knob"></div>
+          </label>
+        </div>
+        <div class="status-pill off" id="statusPill">Unavailable</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Profile Actions</div>
+          <div class="card-sub">Update your manual location details</div>
+        </div>
+        <div class="stack">
+          <div class="field"><label>Location</label><input type="text" id="profileLocation" placeholder="City / area"></div>
+          <div class="field"><label>Latitude</label><input type="number" step="any" id="profileLatitude" placeholder="19.0760"></div>
+          <div class="field"><label>Longitude</label><input type="number" step="any" id="profileLongitude" placeholder="72.8777"></div>
+          <div class="action-row"><button class="mini-btn primary" onclick="saveLocation()">Save Location</button></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="triple-row">
+      <div class="card">
+        <div class="notif-heading">
+          <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2H10c0 1.1.9 2 2 2zm6-6V11c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+          Blood Requests
+          <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+          <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">Refresh</button>
+        </div>
+        <div id="matchInfo" style="font-size:12px;color:var(--gray-400);margin-bottom:12px;display:none;"></div>
+        <div class="notif-list" id="notifList"><div class="notif-empty">Loading...</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Donation History</div><div class="card-sub">Your confirmed donation records</div></div>
+        <div class="notif-list" id="historyList"><div class="notif-empty">Loading...</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Appointments</div><div class="card-sub">Assigned and accepted donation slots</div></div>
+        <div class="notif-list" id="appointmentList"><div class="notif-empty">Loading...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = 'http://localhost:3002';
+  let donor = null;
+  let countdownTimer = null;
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return 'Recently';
+    const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return Math.floor(diff / 60) + ' min ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' hr ago';
+    return Math.floor(diff / 86400) + ' day(s) ago';
+  }
+
+  const donorCanDonateTo = {
+    'O-':['O-','O+','A-','A+','B-','B+','AB-','AB+'],
+    'O+':['O+','A+','B+','AB+'],
+    'A-':['A-','A+','AB-','AB+'],
+    'A+':['A+','AB+'],
+    'B-':['B-','B+','AB-','AB+'],
+    'B+':['B+','AB+'],
+    'AB-':['AB-','AB+'],
+    'AB+':['AB+']
+  };
+
+  function normalizeBloodGroup(value) {
+    return String(value || '').replace(/-/g, '-').trim().toUpperCase();
+  }
+
+  function canDonorHelp(donorBlood, requestedBlood) {
+    const d = normalizeBloodGroup(donorBlood);
+    const r = normalizeBloodGroup(requestedBlood);
+    if (!d || !r) return false;
+    return (donorCanDonateTo[d] || []).includes(r);
+  }
+
+  async function loadSession() {
+    const raw = sessionStorage.getItem('donorSession') || localStorage.getItem('donorSession');
+    if (!raw) { window.location.href = 'Landing.html'; return; }
+    try {
+      donor = JSON.parse(raw);
+    } catch (e) {
+      window.location.href = 'Landing.html';
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/donors`);
+      const data = await response.json();
+      const fresh = (data.donors || []).find(d => Number(d.id) === Number(donor.id) || ((d.email || '').toLowerCase() === (donor.email || '').toLowerCase()));
+      if (fresh) {
+        donor = { ...donor, ...fresh, blood: fresh.bloodGroup, location: fresh.locationLabel };
+        sessionStorage.setItem('donorSession', JSON.stringify(donor));
+        localStorage.setItem('donorSession', JSON.stringify(donor));
+        if (donor.email) {
+          const stored = localStorage.getItem('donor_' + donor.email.toLowerCase());
+          if (stored) {
+            const profile = JSON.parse(stored);
+            localStorage.setItem('donor_' + donor.email.toLowerCase(), JSON.stringify({ ...profile, ...donor, blood: donor.bloodGroup, location: donor.locationLabel }));
+          }
+        }
+      }
+    } catch (e) {}
+
+    renderProfile();
+    renderAvailability();
+    renderRequests();
+    renderHistory();
+    renderAppointments();
+  }
+
+  function renderProfile() {
+    const blood = donor.bloodGroup || donor.blood || '';
+    document.getElementById('dash-name').textContent = donor.name || '-';
+    document.getElementById('dash-blood').textContent = blood || '-';
+    document.getElementById('info-name').textContent = donor.name || '-';
+    document.getElementById('info-age').textContent = donor.age ? donor.age + ' years' : '-';
+    document.getElementById('info-blood').textContent = blood || '-';
+    document.getElementById('info-location').textContent = donor.locationLabel || donor.location || '-';
+    document.getElementById('info-phone').textContent = donor.phone || '-';
+    document.getElementById('profileLocation').value = donor.locationLabel || '';
+    document.getElementById('profileLatitude').value = donor.latitude != null ? donor.latitude : '';
+    document.getElementById('profileLongitude').value = donor.longitude != null ? donor.longitude : '';
+    document.getElementById('impactDonations').textContent = donor.impact && Number.isFinite(donor.impact.totalDonations) ? donor.impact.totalDonations : 0;
+    document.getElementById('impactLives').textContent = donor.impact && Number.isFinite(donor.impact.estimatedLivesHelped) ? donor.impact.estimatedLivesHelped : 0;
+
+    const row = document.getElementById('eligRow');
+    const eligibility = donor.eligibility || null;
+    const age = parseInt(donor.age, 10);
+    if (eligibility) {
+      if (eligibility.eligible) {
+        row.style.cssText = '';
+        document.getElementById('elig-title').style.color = '';
+        document.getElementById('elig-title').textContent = "You're eligible to donate!";
+        document.getElementById('elig-desc').style.color = '';
+        document.getElementById('elig-desc').textContent = eligibility.lastDonationDate
+          ? `You can donate again now. Last donation: ${new Date(eligibility.lastDonationDate).toLocaleDateString()}`
+          : 'Age, availability, and cooldown rules passed';
+      } else {
+        row.style.background = '#fff8e1';
+        row.style.borderColor = '#ffe082';
+        document.getElementById('elig-title').style.color = '#b45309';
+        document.getElementById('elig-title').textContent = 'Not currently eligible';
+        document.getElementById('elig-desc').style.color = '#92400e';
+        document.getElementById('elig-desc').textContent = eligibility.nextEligibleDate
+          ? `You can donate again on ${new Date(eligibility.nextEligibleDate).toLocaleDateString()} (${Math.max(0, Number(eligibility.remainingDays || 0))} day(s) left)`
+          : (eligibility.reason || 'Cooldown or availability rule applied');
+      }
+    } else if (age >= 18 && age <= 65) {
+      row.style.cssText = '';
+      document.getElementById('elig-title').style.color = '';
+      document.getElementById('elig-title').textContent = "You're eligible to donate!";
+      document.getElementById('elig-desc').style.color = '';
+      document.getElementById('elig-desc').textContent = 'Age and health criteria met';
+    } else {
+      row.style.background = '#fff8e1';
+      row.style.borderColor = '#ffe082';
+      document.getElementById('elig-title').style.color = '#b45309';
+      document.getElementById('elig-title').textContent = 'Not currently eligible';
+      document.getElementById('elig-desc').style.color = '#92400e';
+      document.getElementById('elig-desc').textContent = 'Age must be between 18-65 years';
+    }
+    startCountdown();
+  }
+
+  function startCountdown() {
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      if (!donor || !donor.eligibility || !donor.eligibility.nextEligibleDate || donor.eligibility.eligible) return;
+      const next = new Date(donor.eligibility.nextEligibleDate);
+      const days = Math.max(0, Math.ceil((next - new Date()) / 86400000));
+      document.getElementById('elig-desc').textContent = `You can donate again on ${next.toLocaleDateString()} (${days} day(s) left)`;
+    }, 60000);
+  }
+
+  function renderAvailability() {
+    const isOn = donor.available === true;
+    document.getElementById('availToggle').checked = isOn;
+    const pill = document.getElementById('statusPill');
+    pill.textContent = donor.eligibility ? donor.eligibility.readinessStatus : (isOn ? 'Ready to Donate' : 'Unavailable');
+    pill.className = 'status-pill ' + (isOn ? 'on' : 'off');
+  }
+
+  async function updateStatus() {
+    const isOn = document.getElementById('availToggle').checked;
+    try {
+      const response = await fetch(`${API_BASE}/donors/update-status`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ donorId: donor.id, email: donor.email, available: isOn })
+      });
+      const data = await response.json();
+      if (data.donor) {
+        donor = { ...donor, ...data.donor, blood: data.donor.bloodGroup, location: data.donor.locationLabel };
+        sessionStorage.setItem('donorSession', JSON.stringify(donor));
+        localStorage.setItem('donorSession', JSON.stringify(donor));
+        renderProfile();
+        renderAvailability();
+      }
+    } catch (e) {}
+  }
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371, toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function renderRequests() {
+    const list = document.getElementById('notifList');
+    const badge = document.getElementById('notifBadge');
+    const info = document.getElementById('matchInfo');
+    const donorBlood = normalizeBloodGroup(donor.bloodGroup || donor.blood || '');
+    if (!donorBlood) {
+      list.innerHTML = '<div class="notif-empty">Blood group not found in your profile.</div>';
+      badge.style.display = 'none';
+      info.style.display = 'none';
+      return;
+    }
+
+    list.innerHTML = '<div class="notif-empty">Loading...</div>';
+    fetch(`${API_BASE}/requests`)
+      .then(r => r.json())
+      .then(data => displayRequests(data.requests || [], donorBlood, list, badge, info))
+      .catch(() => {
+        list.innerHTML = '<div class="notif-empty">Backend not running.</div>';
+        badge.style.display = 'none';
+        info.style.display = 'none';
+      });
+  }
+
+  function displayRequests(reqs, donorBlood, list, badge, info) {
+    const matching = reqs
+      .filter(r => canDonorHelp(donorBlood, r.bloodGroup))
+      .filter(r => ['Pending', 'Booked', 'Accepted'].includes(r.status || 'Pending'))
+      .map(r => {
+        const baseLat = donor.latitude;
+        const baseLon = donor.longitude;
+        const distance = (baseLat && baseLon && r.latitude && r.longitude) ? haversineKm(baseLat, baseLon, r.latitude, r.longitude) : null;
+        return { ...r, distanceKm: distance == null ? null : Number(distance.toFixed(1)) };
+      })
+      .sort((a, b) => {
+        const aRank = a.priorityRank || (a.urgency === 'Emergency' ? 3 : a.urgency === 'Urgent' ? 2 : 1);
+        const bRank = b.priorityRank || (b.urgency === 'Emergency' ? 3 : b.urgency === 'Urgent' ? 2 : 1);
+        if (aRank !== bRank) return bRank - aRank;
+        if (a.distanceKm == null && b.distanceKm == null) return 0;
+        if (a.distanceKm == null) return 1;
+        if (b.distanceKm == null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+
+    if (!matching.length) {
+      list.innerHTML = '<div class="notif-empty">No matching blood requests for your type right now.</div>';
+      badge.style.display = 'none';
+      info.style.display = 'block';
+      info.innerHTML = `No current requests need your blood type (${esc(donorBlood)})`;
+      return;
+    }
+
+    badge.textContent = matching.length;
+    badge.style.display = 'inline-block';
+    info.style.display = 'block';
+    info.innerHTML = `<span style="color:var(--green);font-weight:600;">Matched: ${matching.length} request${matching.length !== 1 ? 's' : ''} for your blood type (${esc(donorBlood)})</span>`;
+
+    list.innerHTML = '';
+    matching.forEach(req => {
+      const isEmergency = req.urgency === 'Emergency';
+      const acceptedByMe = Number(req.acceptedDonorId || 0) === Number(donor.id);
+      const canAccept = (req.status === 'Pending' || !req.status) && !(donor.eligibility && donor.eligibility.bookedRequestId && Number(donor.eligibility.bookedRequestId) !== Number(req.id));
+      const item = document.createElement('div');
+      item.className = 'notif-item';
+      item.innerHTML = `
+        <div class="notif-icon-wrap ${isEmergency ? 'emergency' : 'normal'}">
+          <svg viewBox="0 0 24 24"><path d="M12 2C12 2 4 10 4 15a8 8 0 0016 0C20 10 12 2 12 2z"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="notif-title">
+            ${esc(req.bloodGroup)} blood needed
+            <span class="tag ${isEmergency ? 'tag-emergency' : 'tag-normal'}">${esc(req.priority || req.urgency || 'Normal')}</span>
+            <span class="tag tag-match">Matched</span>
+          </div>
+          <div class="notif-meta">
+            ${esc(req.hospitalName || 'Hospital')} - ${esc(req.department || req.location || '')} - ${req.units} unit${req.units > 1 ? 's' : ''} - ${esc(req.status || 'Pending')}${req.distanceKm != null ? ` - ${req.distanceKm.toFixed(1)} km away` : ''}
+          </div>
+          <div class="action-row">
+            <button class="mini-btn success" ${canAccept ? '' : 'disabled'} data-action="accept">${acceptedByMe ? 'Accepted' : 'Accept'}</button>
+            <button class="mini-btn" ${acceptedByMe ? 'disabled' : ''} data-action="decline">Decline</button>
+          </div>
+        </div>
+      `;
+      item.querySelector('[data-action="accept"]').addEventListener('click', () => respondToRequest(req.id, 'accept'));
+      item.querySelector('[data-action="decline"]').addEventListener('click', () => respondToRequest(req.id, 'decline'));
+      list.appendChild(item);
+    });
+  }
+
+  async function respondToRequest(requestId, action) {
+    try {
+      const response = await fetch(`${API_BASE}/requests/respond`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ donorId: donor.id, requestId, action })
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) throw new Error(data.error || 'Request response failed');
+      if (data.donor) {
+        donor = { ...donor, ...data.donor, blood: data.donor.bloodGroup, location: data.donor.locationLabel };
+        sessionStorage.setItem('donorSession', JSON.stringify(donor));
+        localStorage.setItem('donorSession', JSON.stringify(donor));
+      }
+      renderProfile();
+      renderAvailability();
+      renderRequests();
+    } catch (error) {
+      alert(error.message || 'Could not update request');
+    }
+  }
+
+  async function saveLocation() {
+    const locationLabel = document.getElementById('profileLocation').value.trim();
+    const latitude = parseFloat(document.getElementById('profileLatitude').value);
+    const longitude = parseFloat(document.getElementById('profileLongitude').value);
+    try {
+      const response = await fetch(`${API_BASE}/donors/update-location`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ donorId: donor.id, email: donor.email, locationLabel, latitude, longitude })
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) throw new Error(data.error || 'Location update failed');
+      donor = { ...donor, ...data.donor, blood: data.donor.bloodGroup, location: data.donor.locationLabel };
+      sessionStorage.setItem('donorSession', JSON.stringify(donor));
+      localStorage.setItem('donorSession', JSON.stringify(donor));
+      renderProfile();
+      renderRequests();
+    } catch (error) {
+      alert(error.message || 'Could not save location');
+    }
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    if (!donor || !donor.id) {
+      list.innerHTML = '<div class="notif-empty">No donor profile found.</div>';
+      return;
+    }
+    fetch(`${API_BASE}/donors/${encodeURIComponent(donor.id)}/history`)
+      .then(r => r.json())
+      .then(data => {
+        const donations = data.donations || [];
+        const certificates = data.certificates || [];
+        if (!donations.length) {
+          list.innerHTML = '<div class="notif-empty">No confirmed donations yet.</div>';
+          return;
+        }
+          list.innerHTML = '';
+          donations.slice(0, 5).forEach(record => {
+            const hasCertificate = certificates.find(cert => Number(cert.donationId) === Number(record.id));
+            const item = document.createElement('div');
+            item.className = 'notif-item';
+            item.innerHTML = `
+              <div class="notif-icon-wrap normal"><svg viewBox="0 0 24 24"><path d="M12 2C12 2 4 10 4 15a8 8 0 0016 0C20 10 12 2 12 2z"/></svg></div>
+              <div style="flex:1;min-width:0;">
+                <div class="notif-title">${esc(record.bloodGroup)} donation confirmed</div>
+                <div class="notif-meta">${esc(record.hospitalName || 'Hospital')} - ${new Date(record.date).toLocaleDateString()}${hasCertificate ? ' - Certificate ready' : ''}</div>
+                ${hasCertificate ? `<a class="cert-link" href="${API_BASE}/certificates/${hasCertificate.id}/download" target="_blank" rel="noopener">View Certificate</a>` : ''}
+              </div>
+            `;
+            list.appendChild(item);
+          });
+      })
+      .catch(() => {
+        list.innerHTML = '<div class="notif-empty">Could not load donation history.</div>';
+      });
+  }
+
+  function renderAppointments() {
+    const list = document.getElementById('appointmentList');
+    if (!donor || !donor.id) {
+      list.innerHTML = '<div class="notif-empty">No donor profile found.</div>';
+      return;
+    }
+    fetch(`${API_BASE}/appointments?donorId=${encodeURIComponent(donor.id)}`)
+      .then(r => r.json())
+      .then(data => {
+        const appointments = data.appointments || [];
+        if (!appointments.length) {
+          list.innerHTML = '<div class="notif-empty">No appointments assigned yet.</div>';
+          return;
+        }
+        list.innerHTML = '';
+        appointments.slice(0, 5).forEach(record => {
+          const item = document.createElement('div');
+          item.className = 'notif-item';
+          item.innerHTML = `
+            <div class="notif-icon-wrap normal"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg></div>
+            <div style="flex:1;min-width:0;">
+              <div class="notif-title">${esc(record.hospitalName || 'Hospital')} - ${esc(record.status || 'Open')}</div>
+              <div class="notif-meta">${new Date(record.slot).toLocaleString()}${record.bloodGroup ? ` - ${esc(record.bloodGroup)}` : ''}</div>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      })
+      .catch(() => {
+        list.innerHTML = '<div class="notif-empty">Could not load appointments.</div>';
+      });
+  }
+
+  function manualRefresh() {
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    renderRequests();
+    setTimeout(() => { btn.disabled = false; }, 1000);
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('donorSession');
+    localStorage.removeItem('donorSession');
+    window.location.href = 'Landing.html';
+  }
+
+  loadSession();
+  setInterval(() => {
+    loadSession();
+    renderRequests();
+    renderHistory();
+    renderAppointments();
+  }, 5000);
+</script>
+</body>
+</html>
